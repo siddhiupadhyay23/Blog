@@ -36,7 +36,7 @@ export default function Projects() {
           </ul>
         </section>
       </div>
-      <CallToAction />
+
     </div>
   );
 }

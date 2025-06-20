@@ -4,10 +4,16 @@ import { create, deletepost, getposts, updatepost } from '../controllers/post.co
 
 const router = express.Router();
 
-router.post('/create', verifyToken, create)
-router.get('/getposts', getposts)
-router.delete('/deletepost/:postId/:userId', verifyToken, deletepost)
-router.put('/updatepost/:postId/:userId', verifyToken, updatepost)
+// Create post route - requires authentication and admin privileges
+router.post('/create', verifyToken, create);
 
+// Get posts route - public access, supports filtering and pagination
+router.get('/getposts', getposts);
+
+// Delete post route - requires authentication and proper authorization
+router.delete('/deletepost/:postId/:userId', verifyToken, deletepost);
+
+// Update post route - requires authentication and proper authorization
+router.put('/updatepost/:postId/:userId', verifyToken, updatepost);
 
 export default router;

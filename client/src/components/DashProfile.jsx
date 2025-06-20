@@ -1,13 +1,6 @@
-import { Alert, Button, Modal, ModalBody, TextInput } from 'flowbite-react';
+import { Alert, Button, Modal, TextInput } from 'flowbite-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import {
-  getDownloadURL,
-  getStorage,
-  ref,
-  uploadBytesResumable,
-} from 'firebase/storage';
-import { app } from '../firebase';
 import { CircularProgressbar } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import {
@@ -36,6 +29,11 @@ export default function DashProfile() {
   const [formData, setFormData] = useState({});
   const filePickerRef = useRef();
   const dispatch = useDispatch();
+
+  // Cloudinary configuration - Replace with your actual values
+  const CLOUD_NAME = 'dwhwz2dwc'; // Replace with your Cloudinary cloud name
+  const UPLOAD_PRESET = 'mern-blog'; // Replace with your upload preset
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -43,6 +41,7 @@ export default function DashProfile() {
       setImageFileUrl(URL.createObjectURL(file));
     }
   };
+
   useEffect(() => {
     if (imageFile) {
       uploadImage();
@@ -50,47 +49,54 @@ export default function DashProfile() {
   }, [imageFile]);
 
   const uploadImage = async () => {
-    // service firebase.storage {
-    //   match /b/{bucket}/o {
-    //     match /{allPaths=**} {
-    //       allow read;
-    //       allow write: if
-    //       request.resource.size < 2 * 1024 * 1024 &&
-    //       request.resource.contentType.matches('image/.*')
-    //     }
-    //   }
-    // }
     setImageFileUploading(true);
     setImageFileUploadError(null);
-    const storage = getStorage(app);
-    const fileName = new Date().getTime() + imageFile.name;
-    const storageRef = ref(storage, fileName);
-    const uploadTask = uploadBytesResumable(storageRef, imageFile);
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress =
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-
-        setImageFileUploadProgress(progress.toFixed(0));
-      },
-      (error) => {
-        setImageFileUploadError(
-          'Could not upload image (File must be less than 2MB)'
-        );
-        setImageFileUploadProgress(null);
-        setImageFile(null);
-        setImageFileUrl(null);
-        setImageFileUploading(false);
-      },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          setImageFileUrl(downloadURL);
-          setFormData({ ...formData, profilePicture: downloadURL });
-          setImageFileUploading(false);
-        });
+    setImageFileUploadProgress(0);
+    
+    try {
+      // Validate configuration
+      if (!CLOUD_NAME || CLOUD_NAME === 'your-cloud-name') {
+        throw new Error('Please configure your Cloudinary cloud name');
       }
-    );
+      if (!UPLOAD_PRESET || UPLOAD_PRESET === 'your-upload-preset') {
+        throw new Error('Please configure your Cloudinary upload preset');
+      }
+
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', imageFile);
+      uploadFormData.append('upload_preset', UPLOAD_PRESET);
+      
+      // Use fetch with better error handling
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        {
+          method: 'POST',
+          body: uploadFormData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Cloudinary error:', errorData);
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: Upload failed`);
+      }
+
+      const data = await response.json();
+      
+      // Success
+      setImageFileUrl(data.secure_url);
+      setFormData(prev => ({ ...prev, profilePicture: data.secure_url }));
+      setImageFileUploading(false);
+      setImageFileUploadProgress(100);
+      
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      setImageFileUploadError(error.message || 'Upload failed. Please try again.');
+      setImageFileUploadProgress(null);
+      setImageFile(null);
+      setImageFileUrl(null);
+      setImageFileUploading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -101,14 +107,17 @@ export default function DashProfile() {
     e.preventDefault();
     setUpdateUserError(null);
     setUpdateUserSuccess(null);
+    
     if (Object.keys(formData).length === 0) {
       setUpdateUserError('No changes made');
       return;
     }
+    
     if (imageFileUploading) {
       setUpdateUserError('Please wait for image to upload');
       return;
     }
+    
     try {
       dispatch(updateStart());
       const res = await fetch(`/api/user/update/${currentUser._id}`, {
@@ -119,6 +128,7 @@ export default function DashProfile() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
+      
       if (!res.ok) {
         dispatch(updateFailure(data.message));
         setUpdateUserError(data.message);
@@ -131,6 +141,7 @@ export default function DashProfile() {
       setUpdateUserError(error.message);
     }
   };
+
   const handleDeleteUser = async () => {
     setShowModal(false);
     try {
@@ -139,6 +150,7 @@ export default function DashProfile() {
         method: 'DELETE',
       });
       const data = await res.json();
+      
       if (!res.ok) {
         dispatch(deleteUserFailure(data.message));
       } else {
@@ -155,6 +167,7 @@ export default function DashProfile() {
         method: 'POST',
       });
       const data = await res.json();
+      
       if (!res.ok) {
         console.log(data.message);
       } else {
@@ -164,6 +177,18 @@ export default function DashProfile() {
       console.log(error.message);
     }
   };
+
+  // Don't render if no current user
+  if (!currentUser) {
+    return (
+      <div className='max-w-lg mx-auto p-3 w-full'>
+        <Alert color='failure'>
+          No user data available. Please sign in again.
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className='max-w-lg mx-auto p-3 w-full'>
       <h1 className='my-7 text-center font-semibold text-3xl'>Profile</h1>
@@ -179,7 +204,7 @@ export default function DashProfile() {
           className='relative w-32 h-32 self-center cursor-pointer shadow-md overflow-hidden rounded-full'
           onClick={() => filePickerRef.current.click()}
         >
-          {imageFileUploadProgress && (
+          {imageFileUploadProgress && imageFileUploadProgress < 100 && (
             <CircularProgressbar
               value={imageFileUploadProgress || 0}
               text={`${imageFileUploadProgress}%`}

@@ -72,34 +72,65 @@ export const getposts = async (req, res, next) => {
 };
 
 export const deletepost = async (req, res, next) => {
-  if (!req.user.isAdmin || req.user.id !== req.params.userId) {
+  // Check if user is admin AND (either they own the post OR they're admin)
+  if (!req.user.isAdmin) {
     return next(errorHandler(403, 'You are not allowed to delete this post'));
   }
+  
   try {
+    // First check if the post exists
+    const post = await Post.findById(req.params.postId);
+    if (!post) {
+      return next(errorHandler(404, 'Post not found'));
+    }
+
+    // Check if user owns the post or is admin
+    if (req.user.id !== req.params.userId && !req.user.isAdmin) {
+      return next(errorHandler(403, 'You can only delete your own posts'));
+    }
+
     await Post.findByIdAndDelete(req.params.postId);
-    res.status(200).json('The post has been deleted');
+    res.status(200).json({ message: 'The post has been deleted successfully' });
   } catch (error) {
     next(error);
   }
 };
 
 export const updatepost = async (req, res, next) => {
-  if (!req.user.isAdmin || req.user.id !== req.params.userId) {
+  if (!req.user.isAdmin && req.user.id !== req.params.userId) {
     return next(errorHandler(403, 'You are not allowed to update this post'));
   }
+  
   try {
+    // Check if post exists first
+    const existingPost = await Post.findById(req.params.postId);
+    if (!existingPost) {
+      return next(errorHandler(404, 'Post not found'));
+    }
+
+    // Generate new slug if title is being updated
+    let updateData = {
+      title: req.body.title,
+      content: req.body.content,
+      category: req.body.category,
+      image: req.body.image,
+    };
+
+    // If title is being updated, regenerate slug
+    if (req.body.title && req.body.title !== existingPost.title) {
+      updateData.slug = req.body.title
+        .split(' ')
+        .join('-')
+        .toLowerCase()
+        .replace(/[^a-zA-Z0-9-]/g, '');
+    }
+
     const updatedPost = await Post.findByIdAndUpdate(
       req.params.postId,
-      {
-        $set: {
-          title: req.body.title,
-          content: req.body.content,
-          category: req.body.category,
-          image: req.body.image,
-        },
-      },
+      { $set: updateData },
       { new: true }
     );
+    
     res.status(200).json(updatedPost);
   } catch (error) {
     next(error);
