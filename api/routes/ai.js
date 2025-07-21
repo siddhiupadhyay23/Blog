@@ -1,10 +1,14 @@
 // routes/ai.js
 import express from 'express';
 import { verifyToken } from '../utils/verifyUser.js';
+import selectPhotoRouter from './select-photo.js';
 // Uncomment the line below when you want to use real OpenAI
 // import OpenAI from 'openai';
 
 const router = express.Router();
+
+// Use the select-photo router for /select-photo endpoint
+router.use('/select-photo', selectPhotoRouter);
 
 // Initialize OpenAI (uncomment when ready to use real AI)
 // const openai = new OpenAI({

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Image Upload Helper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"] {
+            display: block;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .preview {
+            margin-top: 20px;
+        }
+        img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+        .copy-btn {
+            background-color: #2196F3;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Blog Image Upload Helper</h1>
+    
+    <div class="instructions">
+        <h2>Instructions</h2>
+        <p>This tool helps you upload images to your blog. Follow these steps:</p>
+        <ol>
+            <li>Select an image file using the form below</li>
+            <li>Click "Upload Image" to upload it to the server</li>
+            <li>Once uploaded, you'll get an image URL that you can copy</li>
+            <li>Use this URL in your blog post's image field</li>
+        </ol>
+    </div>
+
+    <div class="container">
+        <h2>Upload Image</h2>
+        <div class="form-group">
+            <label for="image">Select Image:</label>
+            <input type="file" id="image" accept="image/*">
+        </div>
+        <button id="uploadBtn">Upload Image</button>
+        
+        <div class="preview" id="preview" style="display: none;">
+            <h3>Image Preview:</h3>
+            <img id="previewImg" src="" alt="Preview">
+        </div>
+        
+        <div class="result" id="result" style="display: none;">
+            <h3>Upload Result:</h3>
+            <div id="resultMessage"></div>
+            <div id="imageUrl" style="display: none;">
+                <h4>Image URL:</h4>
+                <input type="text" id="imageUrlInput" readonly style="width: 100%; padding: 5px;">
+                <button id="copyBtn" class="copy-btn">Copy URL</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get auth token from cookies
+        function getAuthToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'access_token') {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        // Preview image before upload
+        document.getElementById('image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('previewImg').src = event.target.result;
+                    document.getElementById('preview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Upload image
+        document.getElementById('uploadBtn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('image');
+            const resultDiv = document.getElementById('result');
+            const resultMessage = document.getElementById('resultMessage');
+            const imageUrlDiv = document.getElementById('imageUrl');
+            const imageUrlInput = document.getElementById('imageUrlInput');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultDiv.style.display = 'block';
+                resultMessage.innerHTML = '<p class="error">Please select an image file first.</p>';
+                imageUrlDiv.style.display = 'none';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            resultDiv.style.display = 'block';
+            resultMessage.innerHTML = '<p>Uploading image, please wait...</p>';
+            imageUrlDiv.style.display = 'none';
+            
+            try {
+                const token = getAuthToken();
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        ...(token && { 'Authorization': `Bearer ${token}` })
+                    },
+                    credentials: 'include',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultMessage.innerHTML = '<p class="success">Image uploaded successfully!</p>';
+                    imageUrlInput.value = data.url;
+                    imageUrlDiv.style.display = 'block';
+                } else {
+                    resultMessage.innerHTML = `<p class="error">Upload failed: ${data.message || 'Unknown error'}</p>`;
+                    imageUrlDiv.style.display = 'none';
+                }
+            } catch (error) {
+                resultMessage.innerHTML = `<p class="error">Upload failed: ${error.message}</p>`;
+                imageUrlDiv.style.display = 'none';
+            }
+        });
+        
+        // Copy URL to clipboard
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const imageUrlInput = document.getElementById('imageUrlInput');
+            imageUrlInput.select();
+            document.execCommand('copy');
+            this.textContent = 'Copied!';
+            setTimeout(() => {
+                this.textContent = 'Copy URL';
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

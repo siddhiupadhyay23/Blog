@@ -2,6 +2,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { verifyToken } from '../utils/verifyUser.js';
 
@@ -9,19 +10,15 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configure multer for local storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Make sure this directory exists
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Ensure uploads directory exists
+const uploadsDir = path.join(path.dirname(path.dirname(__dirname)), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
+// Configure multer for memory storage first (more reliable)
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -44,14 +41,23 @@ router.post('/', verifyToken, upload.single('image'), (req, res) => {
       });
     }
 
-    const fileUrl = `/uploads/${req.file.filename}`;
+    // Generate a unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const fileExtension = path.extname(req.file.originalname) || '.jpg';
+    const filename = 'image-' + uniqueSuffix + fileExtension;
+    const filepath = path.join(uploadsDir, filename);
+    
+    // Write the file from buffer to disk
+    fs.writeFileSync(filepath, req.file.buffer);
+    
+    const fileUrl = `/uploads/${filename}`;
     
     res.status(200).json({
       success: true,
       message: 'Image uploaded successfully',
       url: fileUrl,
       downloadURL: fileUrl,
-      filename: req.file.filename,
+      filename: filename,
     });
 
   } catch (error) {
@@ -63,5 +69,4 @@ router.post('/', verifyToken, upload.single('image'), (req, res) => {
   }
 });
 
-// At the end of your upload.js file
-module.exports = router;
+export default router;

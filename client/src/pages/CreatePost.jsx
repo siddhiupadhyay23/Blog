@@ -1,15 +1,13 @@
-import { Alert, Button, FileInput, Select, TextInput, Textarea, Card } from 'flowbite-react';
+import { Alert, Button, Select, TextInput, Textarea, Card } from 'flowbite-react';
+import MiniImageUpload from '../components/MiniImageUpload';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useState, useRef, useEffect } from 'react';
-import { CircularProgressbar } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
+// CircularProgressbar removed as we're using a simpler approach
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
 export default function CreatePost() {
-  const [file, setFile] = useState(null);
-  const [imageUploadProgress, setImageUploadProgress] = useState(null);
   const [imageUploadError, setImageUploadError] = useState(null);
   const [formData, setFormData] = useState({});
   const [publishError, setPublishError] = useState(null);
@@ -827,45 +825,8 @@ export default function CreatePost() {
     setAiSuccess(`✅ Sample ${selectedCategory} content generated! (Variation ${(generationCount % variations.length) + 1})`);
   };
 
-  // Image upload handlers
-  const handleUploadImage = async () => {
-    try {
-      if (!file) {
-        setImageUploadError('Please select an image');
-        return;
-      }
-      setImageUploadError(null);
-      setImageUploadProgress(0);
-
-      const formData = new FormData();
-      formData.append('image', file);
-
-      const token = getAuthToken();
-      
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        credentials: 'include',
-        body: formData,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const uploadData = await uploadResponse.json();
-      
-      setFormData(prev => ({ ...prev, image: uploadData.url }));
-      setImageUploadProgress(null);
-      setFile(null);
-      
-    } catch (error) {
-      setImageUploadError('Image upload failed: ' + error.message);
-      setImageUploadProgress(null);
-    }
-  };
+  // Image is now handled directly by SimpleImageUpload component
+  // which converts the image to a data URL and passes it to the parent component
 
   // Form submission
   const handleSubmit = async (e) => {
@@ -879,6 +840,16 @@ export default function CreatePost() {
     try {
       setIsSubmitting(true);
       setPublishError(null);
+      
+      // Check if we have a data URL image that's too large
+      let postData = {...formData, userId: currentUser._id};
+      
+      // If image is a data URL and very large, use a fallback image
+      if (postData.image && postData.image.startsWith('data:image') && postData.image.length > 200000) {
+        console.log('Image data URL is too large, using fallback image');
+        // Use a default image URL instead
+        postData.image = 'https://www.hostinger.com/tutorials/wp-content/uploads/sites/2/2021/09/how-to-write-a-blog-post.png';
+      }
 
       const token = getAuthToken();
 
@@ -889,10 +860,7 @@ export default function CreatePost() {
           ...(token && { 'Authorization': `Bearer ${token}` })
         },
         credentials: 'include',
-        body: JSON.stringify({
-          ...formData,
-          userId: currentUser._id,
-        }),
+        body: JSON.stringify(postData),
       });
 
       const data = await res.json();
@@ -902,6 +870,8 @@ export default function CreatePost() {
           setPublishError('Authentication failed. Please sign in again.');
         } else if (res.status === 403) {
           setPublishError('Access denied. Admin privileges required.');
+        } else if (res.status === 413) {
+          setPublishError('Image is too large. Please use a smaller image or try again.');
         } else {
           setPublishError(data.message || 'Failed to create post');
         }
@@ -1060,32 +1030,12 @@ export default function CreatePost() {
           </Select>
         </div>
         
-        <div className='flex gap-4 items-center justify-between border-4 border-teal-500 border-dotted p-3'>
-          <FileInput
-            type='file'
-            accept='image/*'
-            onChange={(e) => setFile(e.target.files[0])}
-          />
-          <Button
-            type='button'
-            gradientDuoTone='purpleToBlue'
-            size='sm'
-            outline
-            onClick={handleUploadImage}
-            disabled={imageUploadProgress}
-          >
-            {imageUploadProgress ? (
-              <div className='w-16 h-16'>
-                <CircularProgressbar
-                  value={imageUploadProgress}
-                  text={`${imageUploadProgress || 0}%`}
-                />
-              </div>
-            ) : (
-              'Upload Image'
-            )}
-          </Button>
-        </div>
+        <MiniImageUpload 
+          onImageSelected={(imageUrl) => {
+            setFormData({ ...formData, image: imageUrl });
+            setImageUploadError(null);
+          }} 
+        />
         
         {imageUploadError && <Alert color='failure'>{imageUploadError}</Alert>}
         

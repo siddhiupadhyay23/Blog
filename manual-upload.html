@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Image Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+        .step {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .image-preview {
+            max-width: 100%;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        .url-display {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manual Image Upload</h1>
+    
+    <div class="instructions">
+        <h2>How to Upload Images Manually</h2>
+        <p>This tool helps you convert your local images to URLs that you can use in your blog posts.</p>
+    </div>
+
+    <div class="container">
+        <div class="step">
+            <h3>Step 1: Select an Image</h3>
+            <input type="file" id="imageInput" accept="image/*">
+            <div id="preview" style="display: none;">
+                <h4>Preview:</h4>
+                <img id="imagePreview" class="image-preview" src="" alt="Preview">
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Get Image URL</h3>
+            <p>Click the button below to generate a data URL for your image:</p>
+            <button id="generateUrlBtn" disabled>Generate Image URL</button>
+            <div id="urlContainer" class="url-display" style="display: none;"></div>
+            <button id="copyUrlBtn" style="display: none;">Copy URL</button>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Use the URL</h3>
+            <p>Copy the generated URL and paste it into your blog post's image field.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Alternative Method: Use an Image Hosting Service</h2>
+        <p>You can also use free image hosting services like:</p>
+        <ul>
+            <li><a href="https://imgur.com/" target="_blank">Imgur</a></li>
+            <li><a href="https://imgbb.com/" target="_blank">ImgBB</a></li>
+            <li><a href="https://postimages.org/" target="_blank">PostImages</a></li>
+        </ul>
+        <p>Upload your image to one of these services, then copy the direct image URL they provide.</p>
+    </div>
+
+    <script>
+        // Preview image when selected
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('imagePreview').src = event.target.result;
+                    document.getElementById('preview').style.display = 'block';
+                    document.getElementById('generateUrlBtn').disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Generate URL when button clicked
+        document.getElementById('generateUrlBtn').addEventListener('click', function() {
+            const imageUrl = document.getElementById('imagePreview').src;
+            const urlContainer = document.getElementById('urlContainer');
+            urlContainer.textContent = imageUrl;
+            urlContainer.style.display = 'block';
+            document.getElementById('copyUrlBtn').style.display = 'block';
+        });
+
+        // Copy URL to clipboard
+        document.getElementById('copyUrlBtn').addEventListener('click', function() {
+            const urlText = document.getElementById('urlContainer').textContent;
+            navigator.clipboard.writeText(urlText).then(() => {
+                this.textContent = 'Copied!';
+                setTimeout(() => {
+                    this.textContent = 'Copy URL';
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>

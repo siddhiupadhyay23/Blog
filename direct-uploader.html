@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Image Uploader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="file"] {
+            display: block;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            display: none;
+        }
+        img {
+            max-width: 100%;
+            margin-top: 10px;
+        }
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Direct Image Uploader</h1>
+    
+    <div class="instructions">
+        <h3>How to use:</h3>
+        <ol>
+            <li>Select an image file</li>
+            <li>Click "Upload Image"</li>
+            <li>Copy the URL of the uploaded image</li>
+            <li>Use this URL in your blog post's image field</li>
+        </ol>
+    </div>
+    
+    <div class="container">
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="image">Select Image:</label>
+                <input type="file" id="image" name="image" accept="image/*" required>
+            </div>
+            <button type="submit">Upload Image</button>
+        </form>
+        
+        <div id="result" class="result">
+            <h3>Upload Result:</h3>
+            <div id="message"></div>
+            <div id="imageUrlContainer" style="display: none;">
+                <p><strong>Image URL:</strong></p>
+                <input type="text" id="imageUrl" readonly style="width: 100%; padding: 5px; margin-bottom: 10px;">
+                <button id="copyBtn">Copy URL</button>
+                <div>
+                    <h4>Preview:</h4>
+                    <img id="uploadedImage" src="" alt="Uploaded image">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('image');
+            
+            if (!fileInput.files.length) {
+                alert('Please select an image file');
+                return;
+            }
+            
+            formData.append('image', fileInput.files[0]);
+            
+            const resultDiv = document.getElementById('result');
+            const messageDiv = document.getElementById('message');
+            const imageUrlContainer = document.getElementById('imageUrlContainer');
+            const imageUrlInput = document.getElementById('imageUrl');
+            const uploadedImage = document.getElementById('uploadedImage');
+            
+            resultDiv.style.display = 'block';
+            messageDiv.innerHTML = '<p>Uploading image, please wait...</p>';
+            imageUrlContainer.style.display = 'none';
+            
+            try {
+                // Use the standalone uploader endpoint
+                const response = await fetch('http://localhost:3500/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    messageDiv.innerHTML = '<p style="color: green;">Image uploaded successfully!</p>';
+                    imageUrlInput.value = data.url;
+                    uploadedImage.src = data.url;
+                    imageUrlContainer.style.display = 'block';
+                } else {
+                    messageDiv.innerHTML = `<p style="color: red;">Upload failed: ${data.message || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<p style="color: red;">Upload failed: ${error.message}</p>`;
+            }
+        });
+        
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const imageUrlInput = document.getElementById('imageUrl');
+            imageUrlInput.select();
+            document.execCommand('copy');
+            
+            this.textContent = 'Copied!';
+            setTimeout(() => {
+                this.textContent = 'Copy URL';
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

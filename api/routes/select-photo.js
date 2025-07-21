@@ -1,17 +1,17 @@
 // Backend API endpoint for photo selection
 // File: /api/ai/select-photo.js (or similar route)
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 // You'll need to install and configure these:
 // npm install axios
-const axios = require('axios');
+import axios from 'axios';
 
 // Unsplash API configuration
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY; // Add to your .env file
 const UNSPLASH_API_URL = 'https://api.unsplash.com';
 
 // Photo selection endpoint
-router.post('/select-photo', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { query, category, title, orientation = 'landscape', size = 'regular' } = req.body;
     
@@ -296,4 +296,4 @@ router.post('/validate-photo', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
