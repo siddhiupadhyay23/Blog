@@ -1,14 +1,11 @@
-// index.js or server.js (your main server file)
+// index.js - Simplified for Vercel deployment
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import userRoutes from './routes/user.route.js';
-import authRoutes from './routes/auth.route.js';  // Fixed: Changed from auth.js to auth.route.js
-import postRoutes from './routes/post.route.js';  // Fixed: Changed from post.js to post.route.js
-import commentRoutes from './routes/comment.route.js';  // Fixed: Changed from comment.js to comment.route.js
-import aiRoutes from './routes/ai.js'; // This one is correct
-import uploadRoutes from './routes/upload.js'; // Import upload routes
-import messageRoutes from './routes/message.route.js'; // Import message routes
+import authRoutes from './routes/auth.route.js';
+import postRoutes from './routes/post.route.js';
+import commentRoutes from './routes/comment.route.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
@@ -40,14 +37,11 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// API Routes
+// API Routes - Simplified for Vercel deployment
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/post', postRoutes);
 app.use('/api/comment', commentRoutes);
-app.use('/api/ai', aiRoutes); // Add AI routes
-app.use('/api/upload', uploadRoutes); // Add upload routes
-app.use('/api/message', messageRoutes); // Add message routes
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '/client/dist')));
@@ -75,7 +69,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Only start the server if not being imported by Vercel
+// Start the server in development mode
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}!`);
