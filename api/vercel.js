@@ -1,4 +1,4 @@
-// This file is needed for Vercel serverless deployment
-import app from './index.js';
+// vercel.js - Entry point for Vercel serverless functions
+import app from './api.js';
 
 export default app;
