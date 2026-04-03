@@ -1,4 +1,4 @@
-// index.js - Simplified for Vercel deployment
+// index.js - Unified entry point for development and deployment
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -8,7 +8,6 @@ import postRoutes from './routes/post.route.js';
 import commentRoutes from './routes/comment.route.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import fs from 'fs';
 
 dotenv.config();
 
@@ -16,20 +15,11 @@ dotenv.config();
 mongoose
   .connect(process.env.MONGO)
   .then(() => {
-    console.log('MongoDb is connected');
+    console.log('MongoDB connected');
   })
   .catch((err) => {
-    console.log(err);
+    console.error('MongoDB connection error:', err);
   });
-
-const __dirname = path.resolve();
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('Created uploads directory at:', uploadsDir);
-}
 
 const app = express();
 
@@ -37,44 +27,24 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// API Routes - Simplified for Vercel deployment
+// API Routes
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/post', postRoutes);
 app.use('/api/comment', commentRoutes);
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '/client/dist')));
-
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
-
-// Serve HTML helper files
-app.use(express.static(path.join(__dirname)));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+// Helper for testing
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'API is running', timestamp: new Date().toISOString() });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
-  res.status(statusCode).json({
-    success: false,
-    statusCode,
-    message,
-  });
-});
-
-const PORT = process.env.PORT || 3000;
-
-// Start the server in development mode
+// For local development and traditional servers
 if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}!`);
+    console.log(`Server is running on http://localhost:${PORT}`);
   });
 }
 
-// Export the Express app for Vercel
-export default app;
+// Export for Vercel
+export default app;
